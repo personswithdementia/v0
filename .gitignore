@@ -1,10 +1,16 @@
-# Ongoma V2 - Git Ignore File
+# Ongoma V1 - Git Ignore File
 # Excludes build artifacts, IDE files, and temporary files
 
+
+#clang C/C++ 
+.cache/**
+*.kt
+*.png
+*.db
 # ============================================================
 # Android Build Files
 # ============================================================
-
+META-INF
 # Gradle
 .gradle/
 build/
