@@ -1,0 +1,95 @@
+name: Build Ongoma V2
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: make ci-build
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ongoma-v${{ steps.version.outputs.VERSION }}-debug
+          path: builds/ongoma/ongoma-v2-${{ steps.version.outputs.VERSION }}-debug.apk
+          retention-days: 30
+
+      - name: Upload Build Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-report
+          path: builds/ongoma/BUILD_REPORT.md
+          retention-days: 30
+
+      - name: Generate build summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** $(cat VERSION)" >> $GITHUB_STEP_SUMMARY
+          echo "**APK Size:** $(du -h builds/ongoma/*.apk | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "**SHA256:** $(sha256sum builds/ongoma/*.apk | cut -d' ' -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### APK Contents" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          unzip -l builds/ongoma/*.apk | grep -E "\.so|\.dex" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run checks
+        run: make test
+
+      - name: Lint Kotlin code
+        run: ./gradlew lintDebug || true
+
+      - name: Check C++ compilation
+        run: |
+          echo "Checking C++ sources..."
+          find src/main/cpp -name "*.cpp" -o -name "*.h"

@@ -1,0 +1,190 @@
+# Ongoma V2 - Git Ignore File
+# Excludes build artifacts, IDE files, and temporary files
+
+# ============================================================
+# Android Build Files
+# ============================================================
+
+# Gradle
+.gradle/
+build/
+captures/
+.externalNativeBuild
+.cxx/
+
+# Local configuration
+local.properties
+
+# APK files (keep root ongoma.apk for convenience)
+*.apk
+!ongoma.apk
+
+# AAB files
+*.aab
+
+# Signing files
+*.jks
+*.keystore
+key.properties
+
+# ============================================================
+# IDE Files
+# ============================================================
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+
+# Keep some useful IDE settings
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+
+# VS Code
+.vscode/
+
+# ============================================================
+# CMake / Native Build
+# ============================================================
+
+# CMake
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile.cmake
+
+# Native libraries
+*.so
+*.a
+*.dylib
+*.dll
+
+# Ninja build files
+.ninja_deps
+.ninja_log
+
+# ============================================================
+# Kotlin / Java
+# ============================================================
+
+# Compiled files
+*.class
+*.jar
+*.war
+*.ear
+*.dex
+*.ap_
+*.aab
+
+# Kotlin
+*.kt.swp
+out/
+
+# ============================================================
+# Temporary / Cache Files
+# ============================================================
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files
+*~
+*.bak
+*.swp
+*.swo
+*.tmp
+
+# Log files
+*.log
+
+# ============================================================
+# Documentation Build
+# ============================================================
+
+# Doxygen output
+docs/html/
+docs/latex/
+docs/xml/
+
+# ============================================================
+# Version Control
+# ============================================================
+
+# Git
+*.orig
+*.rej
+
+# ============================================================
+# Android Specific
+# ============================================================
+
+# Proguard
+proguard/
+proguard-rules.pro.bak
+
+# Android Profiler
+*.hprof
+
+# Lint
+lint-report.html
+lint-results.xml
+
+# ============================================================
+# Keep These Important Files
+# ============================================================
+
+# Keep root APK for easy installation
+!ongoma.apk
+
+# Keep gradle wrapper
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Keep important documentation
+!README.md
+!*.md
+
+# Keep font files
+!fonts/**/*
+!src/main/res/font/**/*
+
+# Keep assets
+!assets/**/*
+!src/main/assets/**/*
+
+# ============================================================
+# Project Specific
+# ============================================================
+
+# Build outputs (except root APK)
+builds/
+
+# NDK
+obj/
+libs/
+
+# Generated files
+gen/
+generated/
+
+# R files
+**/R.java
+
+# Crashlytics
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties

@@ -1,0 +1,48 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="65dp"
+    android:height="65dp"
+    android:viewportWidth="250"
+    android:viewportHeight="250">
+
+    <!-- White circle background (active) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 124.65,34.65 A 90,90 0 1,1 124.65,214.65 A 90,90 0 1,1 124.65,34.65 Z" />
+
+    <!-- White stroke -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.7875"
+        android:pathData="M 124.65,35.0438 A 89.6062,89.6062 0 1,1 124.65,214.2562 A 89.6062,89.6062 0 1,1 124.65,35.0438 Z" />
+
+    <!-- Chord icon (black) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 118.65,97.65 H 97.6504 V 118.65 H 118.65 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 151.65,97.65 H 130.65 V 118.65 H 151.65 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 151.65,130.65 H 130.65 V 151.65 H 151.65 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 118.65,130.65 H 97.6504 V 151.65 H 118.65 Z" />
+</vector>
