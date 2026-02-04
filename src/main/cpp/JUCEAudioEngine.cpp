@@ -1,9 +1,15 @@
+/*
+ * kwada (C) 2026
+ * Author: phedwin
+ *
+ * JUCE-based audio engine implementation
+ */
+
 #include "JUCEAudioEngine.h"
 
 JUCEAudioEngine::JUCEAudioEngine() : sampleRate(SAMPLE_RATE) {
 	LOGI("JUCEAudioEngine constructor called");
 
-	// Initialize voice pool
 	voices.resize(MAX_VOICES);
 	for (auto &voice : voices) {
 		voice = Voice();
@@ -13,15 +19,13 @@ JUCEAudioEngine::JUCEAudioEngine() : sampleRate(SAMPLE_RATE) {
 void JUCEAudioEngine::initialize() {
 	LOGI("JUCEAudioEngine initializing with JUCE framework");
 
-	// Create audio device manager
 	deviceManager = std::make_unique<juce::AudioDeviceManager>();
 
-	// Initialize the default audio device
 	juce::String error =
-	    deviceManager->initialise(0,  // numInputChannelsNeeded
-				      2,  // numOutputChannelsNeeded (stereo)
-				      nullptr,  // savedState
-				      true      // selectDefaultDeviceOnFailure
+	    deviceManager->initialise(0,
+				      2,
+				      nullptr,
+				      true
 	    );
 
 	if (error.isNotEmpty()) {
@@ -30,10 +34,8 @@ void JUCEAudioEngine::initialize() {
 		return;
 	}
 
-	// Set up audio callback
 	deviceManager->addAudioCallback(this);
 
-	// Get actual sample rate
 	if (auto *device = deviceManager->getCurrentAudioDevice()) {
 		sampleRate = device->getCurrentSampleRate();
 		LOGI("Audio device initialized: sampleRate=%.0f, bufferSize=%d",
@@ -62,26 +64,22 @@ void JUCEAudioEngine::shutdown() {
 }
 
 double JUCEAudioEngine::midiNoteToFrequency(int midiNote) {
-	// A4 (MIDI 69) = 440 Hz
 	return 440.0 * std::pow(2.0, (midiNote - 69) / 12.0);
 }
 
 JUCEAudioEngine::Voice *JUCEAudioEngine::findFreeVoice() {
-	// First, look for completely inactive voice
 	for (auto &voice : voices) {
 		if (!voice.active && voice.envelopePhase == Voice::Idle) {
 			return &voice;
 		}
 	}
 
-	// If no free voice, steal the oldest one in release phase
 	for (auto &voice : voices) {
 		if (voice.envelopePhase == Voice::Release) {
 			return &voice;
 		}
 	}
 
-	// Last resort: steal any voice
 	return &voices[0];
 }
 
@@ -97,27 +95,24 @@ JUCEAudioEngine::Voice *JUCEAudioEngine::findVoiceForNote(int midiNote) {
 void JUCEAudioEngine::playNotePolyphonic(int midiNote) {
 	std::lock_guard<std::mutex> lock(voicesMutex);
 
-	// Check if note is already playing
 	if (findVoiceForNote(midiNote) != nullptr) {
 		LOGI("Note %d already playing, ignoring", midiNote);
 		return;
 	}
 
-	// Find a free voice
 	Voice *voice = findFreeVoice();
 	if (!voice) {
 		LOGI("No free voices available");
 		return;
 	}
 
-	// Configure voice
 	voice->midiNote = midiNote;
 	voice->frequency = midiNoteToFrequency(midiNote);
 	voice->phase = 0.0;
 	voice->active = true;
 	voice->envelopePhase = Voice::Attack;
 	voice->envelopeValue = 0.0;
-	voice->amplitude = 0.3;  // Base amplitude
+	voice->amplitude = 0.3;
 
 	LOGI("Playing note: %d (%.2f Hz) on voice", midiNote, voice->frequency);
 }
@@ -193,7 +188,7 @@ void JUCEAudioEngine::audioDeviceIOCallbackWithContext(
     int numOutputChannels,
     int numSamples,
     const juce::AudioIODeviceCallbackContext &context) {
-	// Clear output buffers
+
 	for (int channel = 0; channel < numOutputChannels; ++channel) {
 		if (outputChannelData[channel] != nullptr) {
 			std::fill_n(outputChannelData[channel], numSamples,
@@ -203,7 +198,6 @@ void JUCEAudioEngine::audioDeviceIOCallbackWithContext(
 
 	std::lock_guard<std::mutex> lock(voicesMutex);
 
-	// Process each active voice
 	for (auto &voice : voices) {
 		if (!voice.active && voice.envelopePhase == Voice::Idle) {
 			continue;
@@ -211,7 +205,6 @@ void JUCEAudioEngine::audioDeviceIOCallbackWithContext(
 
 		double phaseIncrement = TWO_PI * voice.frequency / sampleRate;
 
-		/* update update update UPDATE */
 		for (int i = 0; i < numSamples; ++i) {
 			updateEnvelope(voice, 1);
 			float sample = 0.0f;
@@ -221,7 +214,6 @@ void JUCEAudioEngine::audioDeviceIOCallbackWithContext(
 			sample += std::sin(voice.phase * 4.0) * 0.125f;
 			sample += std::sin(voice.phase * 5.0) * 0.08f;
 
-			// Apply amplitude and envelope
 			sample *= static_cast<float>(
 			    voice.amplitude * voice.envelopeValue * 0.5f);
 

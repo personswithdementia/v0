@@ -1,3 +1,10 @@
+/*
+ * kwada (C) 2026
+ * Author: phedwin
+ *
+ * JNI bindings for native audio engine
+ */
+
 #include <android/log.h>
 #include <jni.h>
 #include "SimpleAudioEngine.h"
@@ -6,7 +13,6 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-//<  fix the audio
 static SimpleAudioEngine *g_engine = nullptr;
 
 extern "C" {
@@ -49,7 +55,6 @@ Java_com_ongoma_AudioEngine_nativeStopNote(JNIEnv *env, jobject thiz) {
 	}
 }
 
-// Polyphonic methods
 JNIEXPORT void JNICALL Java_com_ongoma_AudioEngine_nativePlayNotePolyphonic(
     JNIEnv *env, jobject thiz, jint midiNote) {
 	LOGI("nativePlayNotePolyphonic called with MIDI=%d", midiNote);
@@ -85,4 +90,4 @@ Java_com_ongoma_AudioEngine_nativeGetCurrentTime(JNIEnv *env, jobject thiz) {
 	return 0.0;
 }
 
-}  // extern "C"
+}

@@ -1,9 +1,8 @@
 /*
- * JUCE Module Implementation File
- * 
- * This file includes all the JUCE module implementation code
- * in a single compilation unit. This is the standard way to
- * use JUCE in a project.
+ * kwada (C) 2026
+ * Author: phedwin
+ *
+ * JUCE module includes
  */
 
 #include <juce_core/juce_core.cpp>
