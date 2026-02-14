@@ -16,7 +16,7 @@ SimpleAudioEngine::SimpleAudioEngine()
 double SimpleAudioEngine::getCurrentTime() {
     auto now = std::chrono::steady_clock::now();
     auto elapsed = now - engineStartTime;
-    return std::chrono::duration<double>(elapsed).count() ;
+    return std::chrono::duration<double>(elapsed).count();
 }
 
 void SimpleAudioEngine::initialize() {
@@ -71,7 +71,6 @@ void SimpleAudioEngine::stopNote() {
 }
 
 void SimpleAudioEngine::playNotePolyphonic(int midiNote) {
-
     if (!audioStream) {
         LOGE("Cannot play note - audio stream not initialized");
         return;
@@ -79,18 +78,31 @@ void SimpleAudioEngine::playNotePolyphonic(int midiNote) {
 
     std::lock_guard<std::mutex> lock(notesMutex);
 
-    if (activeNotes.find(midiNote) != activeNotes.end()) {
+    auto existing = activeNotes.find(midiNote);
+    if (existing != activeNotes.end()) {
+        // Re-trigger: reset to attack phase for immediate response
+        auto& noteData = existing->second;
+        noteData->state = EnvelopeState::ATTACK;
+        noteData->stateStartTime = getCurrentTime();
+        noteData->isReleasing = false;
+        noteData->noteId = nextNoteId++;
         return;
     }
 
+    // Evict oldest note if at capacity (by noteId, not MIDI number)
     if (activeNotes.size() >= MAX_POLYPHONY) {
-        auto oldestNote = activeNotes.begin();
-        activeNotes.erase(oldestNote);
+        auto oldest = activeNotes.begin();
+        for (auto it = activeNotes.begin(); it != activeNotes.end(); ++it) {
+            if (it->second->noteId < oldest->second->noteId) {
+                oldest = it;
+            }
+        }
+        activeNotes.erase(oldest);
     }
 
     double frequency = midiNoteToFrequency(midiNote);
     double currentTime = getCurrentTime();
-    auto noteData = std::make_shared<NoteData>(midiNote, frequency, currentTime);
+    auto noteData = std::make_shared<NoteData>(midiNote, frequency, currentTime, nextNoteId++);
     activeNotes[midiNote] = noteData;
 }
 
@@ -98,8 +110,7 @@ void SimpleAudioEngine::stopNotePolyphonic(int midiNote) {
     std::lock_guard<std::mutex> lock(notesMutex);
 
     auto it = activeNotes.find(midiNote);
-    if (it != activeNotes.end()) {
-
+    if (it != activeNotes.end() && !it->second->isReleasing) {
         auto& noteData = it->second;
         noteData->state = EnvelopeState::RELEASE;
         noteData->stateStartTime = getCurrentTime();
@@ -113,7 +124,6 @@ void SimpleAudioEngine::stopAllNotes() {
 }
 
 double SimpleAudioEngine::midiNoteToFrequency(int midiNote) {
-
     return 440.0 * std::pow(2.0, ((double)midiNote - 69.0) / 12.0);
 }
 
@@ -122,7 +132,6 @@ double SimpleAudioEngine::calculateEnvelope(const std::shared_ptr<NoteData>& not
 
     switch (noteData->state) {
         case EnvelopeState::ATTACK: {
-
             if (timeInState >= ATTACK_TIME) {
                 return 1.0;
             }
@@ -130,7 +139,6 @@ double SimpleAudioEngine::calculateEnvelope(const std::shared_ptr<NoteData>& not
         }
 
         case EnvelopeState::DECAY: {
-
             if (timeInState >= DECAY_TIME) {
                 return SUSTAIN_LEVEL;
             }
@@ -139,17 +147,14 @@ double SimpleAudioEngine::calculateEnvelope(const std::shared_ptr<NoteData>& not
         }
 
         case EnvelopeState::SUSTAIN:
-
             return SUSTAIN_LEVEL;
 
         case EnvelopeState::RELEASE: {
-
             if (timeInState >= RELEASE_TIME) {
                 return 0.0;
             }
             double progress = timeInState / RELEASE_TIME;
-
-            return SUSTAIN_LEVEL * std::exp(-4.0 * progress);
+            return SUSTAIN_LEVEL * std::exp(-3.0 * progress);
         }
 
         case EnvelopeState::DONE:
@@ -165,18 +170,25 @@ oboe::DataCallbackResult SimpleAudioEngine::onAudioReady(
     int32_t numFrames) {
 
     float *outputBuffer = static_cast<float *>(audioData);
-
     std::fill_n(outputBuffer, numFrames, 0.0f);
 
-    std::lock_guard<std::mutex> lock(notesMutex);
+    // try_lock: never block the audio thread - skip frame if UI has the lock
+    if (!notesMutex.try_lock()) {
+        return oboe::DataCallbackResult::Continue;
+    }
 
     if (activeNotes.empty()) {
+        notesMutex.unlock();
         return oboe::DataCallbackResult::Continue;
     }
 
     double currentTime = getCurrentTime();
 
-    const double volumePerNote = 0.25 / std::max(1.0, static_cast<double>(activeNotes.size()));
+    int activeCount = 0;
+    for (auto& p : activeNotes) {
+        if (!p.second->isReleasing) activeCount++;
+    }
+    const double volumePerNote = 0.7 / std::max(1.0, std::sqrt(static_cast<double>(std::max(1, activeCount))));
 
     std::vector<int> notesToRemove;
 
@@ -192,25 +204,20 @@ oboe::DataCallbackResult SimpleAudioEngine::onAudioReady(
             noteData->state = EnvelopeState::SUSTAIN;
             noteData->stateStartTime = currentTime;
         } else if (noteData->state == EnvelopeState::RELEASE && timeInState >= RELEASE_TIME) {
-
             notesToRemove.push_back(noteData->midiNote);
             continue;
         }
 
         double envelope = calculateEnvelope(noteData, currentTime);
 
-        if (envelope <= 0.0) {
+        if (envelope <= 0.001) {
             notesToRemove.push_back(noteData->midiNote);
             continue;
         }
 
         double phaseIncrement = TWO_PI * noteData->frequency / SAMPLE_RATE;
-        double phaseIncrement2 = phaseIncrement * 2.0;
-        double phaseIncrement3 = phaseIncrement * 3.0;
-        double phaseIncrement4 = phaseIncrement * 4.0;
 
         for (int32_t i = 0; i < numFrames; ++i) {
-
             double sample =
                 HARMONIC_1_AMP * std::sin(noteData->phase) +
                 HARMONIC_2_AMP * std::sin(noteData->phase * 2.0) +
@@ -232,5 +239,6 @@ oboe::DataCallbackResult SimpleAudioEngine::onAudioReady(
         activeNotes.erase(midiNote);
     }
 
+    notesMutex.unlock();
     return oboe::DataCallbackResult::Continue;
 }

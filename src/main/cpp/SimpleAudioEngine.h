@@ -50,15 +50,17 @@ private:
     double stateStartTime;
     double noteStartTime;
     bool isReleasing;
+    uint64_t noteId;
 
-    NoteData(int note, double freq, double startTime)
+    NoteData(int note, double freq, double startTime, uint64_t id)
         : midiNote(note), frequency(freq), phase(0.0),
           state(EnvelopeState::ATTACK), stateStartTime(startTime),
-          noteStartTime(startTime), isReleasing(false) {}
+          noteStartTime(startTime), isReleasing(false), noteId(id) {}
   };
 
   std::map<int, std::shared_ptr<NoteData>> activeNotes;
   std::mutex notesMutex;
+  uint64_t nextNoteId = 0;
 
   std::shared_ptr<oboe::AudioStream> audioStream;
 
@@ -66,13 +68,12 @@ private:
 
   static constexpr int SAMPLE_RATE = 48000;
   static constexpr double TWO_PI = 2.0 * M_PI;
-  static constexpr int MAX_POLYPHONY =
-      20;
+  static constexpr int MAX_POLYPHONY = 24;
 
-  static constexpr double ATTACK_TIME = 0.01;
-  static constexpr double DECAY_TIME = 0.3;
+  static constexpr double ATTACK_TIME = 0.008;
+  static constexpr double DECAY_TIME = 0.15;
   static constexpr double SUSTAIN_LEVEL = 0.6;
-  static constexpr double RELEASE_TIME = 3.0;
+  static constexpr double RELEASE_TIME = 1.5;
 
   static constexpr double HARMONIC_1_AMP = 1.0;
   static constexpr double HARMONIC_2_AMP = 0.4;
