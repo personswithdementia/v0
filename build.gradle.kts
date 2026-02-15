@@ -80,4 +80,6 @@ dependencies {
 
     // AndroidSVG for converting SVG to Bitmap
     implementation("com.caverock:androidsvg-aar:1.4")
+
+    testImplementation("junit:junit:4.13.2")
 }

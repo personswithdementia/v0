@@ -8,6 +8,8 @@
 #include "SimpleAudioEngine.h"
 #include <algorithm>
 
+float SimpleAudioEngine::waveTable[WAVE_TABLE_SIZE] = {};
+
 SimpleAudioEngine::SimpleAudioEngine()
     : engineStartTime(std::chrono::steady_clock::now()) {
     LOGI("AudioEngine constructor called");
@@ -19,7 +21,23 @@ double SimpleAudioEngine::getCurrentTime() {
     return std::chrono::duration<double>(elapsed).count();
 }
 
+void SimpleAudioEngine::initWaveTable() {
+    const double harmonicSum =
+        HARMONIC_1_AMP + HARMONIC_2_AMP + HARMONIC_3_AMP + HARMONIC_4_AMP;
+    for (int i = 0; i < WAVE_TABLE_SIZE; i++) {
+        double phase = TWO_PI * i / WAVE_TABLE_SIZE;
+        waveTable[i] = static_cast<float>(
+            (HARMONIC_1_AMP * std::sin(phase) +
+             HARMONIC_2_AMP * std::sin(phase * 2.0) +
+             HARMONIC_3_AMP * std::sin(phase * 3.0) +
+             HARMONIC_4_AMP * std::sin(phase * 4.0)) /
+            harmonicSum);
+    }
+    LOGI("Wave table initialized (%d entries)", WAVE_TABLE_SIZE);
+}
+
 void SimpleAudioEngine::initialize() {
+    initWaveTable();
     LOGI("SimpleAudioEngine initializing with Oboe");
 
     oboe::AudioStreamBuilder builder;
@@ -210,23 +228,17 @@ oboe::DataCallbackResult SimpleAudioEngine::onAudioReady(
 
         double envelope = calculateEnvelope(noteData, currentTime);
 
-        if (envelope <= 0.001) {
+        if (noteData->isReleasing && envelope <= 0.001) {
             notesToRemove.push_back(noteData->midiNote);
             continue;
         }
 
         double phaseIncrement = TWO_PI * noteData->frequency / SAMPLE_RATE;
+        float envVol = static_cast<float>(envelope * volumePerNote);
 
         for (int32_t i = 0; i < numFrames; ++i) {
-            double sample =
-                HARMONIC_1_AMP * std::sin(noteData->phase) +
-                HARMONIC_2_AMP * std::sin(noteData->phase * 2.0) +
-                HARMONIC_3_AMP * std::sin(noteData->phase * 3.0) +
-                HARMONIC_4_AMP * std::sin(noteData->phase * 4.0);
-
-            sample /= (HARMONIC_1_AMP + HARMONIC_2_AMP + HARMONIC_3_AMP + HARMONIC_4_AMP);
-
-            outputBuffer[i] += static_cast<float>(sample * envelope * volumePerNote);
+            int idx = static_cast<int>(noteData->phase * WAVE_TABLE_SCALE) & WAVE_TABLE_MASK;
+            outputBuffer[i] += waveTable[idx] * envVol;
 
             noteData->phase += phaseIncrement;
             if (noteData->phase >= TWO_PI) {

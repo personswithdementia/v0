@@ -15,6 +15,7 @@ include_directories(
 set(SOURCES
     src/main/cpp/SimpleAudioEngine.cpp
     src/main/cpp/SimpleJNIBridge.cpp
+    src/main/cpp/AudioEngineTest.cpp
 )
 add_library(${CMAKE_PROJECT_NAME} SHARED ${SOURCES})
 
