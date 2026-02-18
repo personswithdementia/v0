@@ -107,15 +107,31 @@ void SimpleAudioEngine::playNotePolyphonic(int midiNote) {
         return;
     }
 
-    // Evict oldest note if at capacity (by noteId, not MIDI number)
+    // Evict a note if at capacity: prefer releasing notes, then oldest
     if (activeNotes.size() >= MAX_POLYPHONY) {
-        auto oldest = activeNotes.begin();
+        auto victim = activeNotes.end();
+
+        // First pass: find oldest releasing note
         for (auto it = activeNotes.begin(); it != activeNotes.end(); ++it) {
-            if (it->second->noteId < oldest->second->noteId) {
-                oldest = it;
+            if (it->second->isReleasing) {
+                if (victim == activeNotes.end() || it->second->noteId < victim->second->noteId) {
+                    victim = it;
+                }
             }
         }
-        activeNotes.erase(oldest);
+
+        // Second pass: if no releasing notes, evict oldest active note
+        if (victim == activeNotes.end()) {
+            for (auto it = activeNotes.begin(); it != activeNotes.end(); ++it) {
+                if (victim == activeNotes.end() || it->second->noteId < victim->second->noteId) {
+                    victim = it;
+                }
+            }
+        }
+
+        if (victim != activeNotes.end()) {
+            activeNotes.erase(victim);
+        }
     }
 
     double frequency = midiNoteToFrequency(midiNote);
